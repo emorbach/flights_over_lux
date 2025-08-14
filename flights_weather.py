@@ -35,7 +35,7 @@ def get_weather():
         response.raise_for_status()
         return response.text.strip()
     except requests.RequestException:
-        return "Weather unavailable"
+        return ""
 
 
 def main():
@@ -60,7 +60,8 @@ def main():
         flight_info = get_curr_flight_info(bounds)
         temp_info = get_weather()
         if not flight_info:
-            if curr_temp == temp_info: continue
+            # only show updated temperature if new and valid temp
+            if curr_temp == temp_info or not temp_info: continue
             print("Current temperature in Luxembourg:", temp_info)
             curr_temp = temp_info
         elif flight_info != last_flight:
