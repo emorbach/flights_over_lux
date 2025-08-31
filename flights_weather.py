@@ -3,7 +3,7 @@ import requests
 from FlightRadar24 import FlightRadar24API
 
 def get_curr_flight_info(bounds):
-    fr_api = FlightRadar24API() # check if this has to be done twice
+    fr_api = FlightRadar24API() # check if this has to be done twice (timeout?)
     flights = fr_api.get_flights(bounds=bounds, details=True)
     for flight in flights:
         if not flight.number: continue
@@ -13,7 +13,8 @@ def get_curr_flight_info(bounds):
             "origin": flight.origin_airport_name,
             "destination": flight.destination_airport_name,
             "airline": flight.airline_short_name,
-            "aircraft": flight.aircraft_code # This needs to be changed, weird short code
+            "aircraft": flight.aircraft_code, # This needs to be changed, weird short code
+            "speed": flight.ground_speed
         }
         # additional possible information:
         # heading, altitude, vertical speed
@@ -26,6 +27,7 @@ def print_flight_info(flight_info):
     print(f"  To:   {flight_info['destination']}")
     print(f"  Airline:   {flight_info['airline']}")
     print(f"  Aircraft:   {flight_info['aircraft']}")
+    print(f"  Speed:   {flight_info['speed']}")
     print()
 
 def get_weather():
@@ -53,9 +55,10 @@ def main():
         radius=radius   
     )
 
-    last_flight = None
+    last_flight_number = None
     curr_temp = ""
 
+    # add error handling!!
     while True:
         flight_info = get_curr_flight_info(bounds)
         temp_info = get_weather()
@@ -64,9 +67,10 @@ def main():
             if curr_temp == temp_info or not temp_info: continue
             print("Current temperature in Luxembourg:", temp_info)
             curr_temp = temp_info
-        elif flight_info != last_flight:
+        elif flight_info['number'] != last_flight_number:
             print_flight_info(flight_info)
-            last_flight = flight_info
+            curr_temp = ""
+            last_flight_number = flight_info['number']
         time.sleep(5)
 
 if __name__ == "__main__":
