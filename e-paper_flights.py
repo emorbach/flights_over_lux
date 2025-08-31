@@ -6,8 +6,12 @@ import time
 import requests
 from FlightRadar24 import FlightRadar24API
 from waveshare_epd import epd7in5_V2
+import logging
 import time
 from PIL import Image,ImageDraw,ImageFont
+
+logging.basicConfig(level=logging.DEBUG)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 picdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'pic')
 font_time_big = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 250)
@@ -98,16 +102,17 @@ def main():
     )
 
     try:
-        print("start")
+        logging.info("start")
         epd = epd7in5_V2.EPD()
-        
-        print("init and Clear")
+
+        logging.info("init and Clear")
         epd.init()
         epd.Clear()
 
         last_flight_number = None
         curr_temp = ""
         last_time = ""
+        flight = 1
 
         # add error handling!!
         while True:
@@ -116,26 +121,28 @@ def main():
 
             # No flight passing, therefore display time and temperature
             if not flight_info:
-                # only show updated temperature if new and valid temp
-                temp_info = get_weather()
-                if current_time == last_time:
-                    if curr_temp == temp_info or not temp_info: continue
-                if temp_info: curr_temp = temp_info
+                # only update once per minute
+                if current_time == last_time and not flight: continue
                 last_time = current_time
+
+                # get new temperature
+                temp_info = get_weather()
+                if temp_info: curr_temp = temp_info
                 display_time(epd, current_time, time.strftime("%d. %B %Y"), curr_temp)
+                flight = 0
 
             elif flight_info['number'] != last_flight_number:
                 print_flight_info(flight_info)
-                curr_temp = ""
                 last_flight_number = flight_info['number']
+                flight = 1
             time.sleep(5)
 
 
     except IOError as e:
-        print("e")
+        logging.info(e)
 
     except KeyboardInterrupt:
-        print("ctrl + c:")
+        logging.info("ctrl + c:")
         epd7in5_V2.epdconfig.module_exit(cleanup=True)
         exit()
 
