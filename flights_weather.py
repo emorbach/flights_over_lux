@@ -13,7 +13,7 @@ def get_curr_flight_info(bounds):
             "origin": flight.origin_airport_name,
             "destination": flight.destination_airport_name,
             "airline": flight.airline_short_name,
-            "aircraft": flight.aircraft_code, # This needs to be changed, weird short code
+            "aircraft": flight.aircraft_model, # This needs to be changed, weird short code
             "speed": flight.ground_speed
         }
         # additional possible information:
@@ -47,7 +47,7 @@ def main():
     lux_longitude = 6.16
 
     # 2km, might have to be adapted but flights on ground are ignored
-    radius = 2000
+    radius = 10000
 
     bounds = fr_api.get_bounds_by_point(
         latitude=lux_latitude,

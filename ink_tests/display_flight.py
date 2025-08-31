@@ -30,18 +30,18 @@ try:
     font_time = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 35)
     font_no = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 150)
 
-
+    '''
     logging.info("read waveshare file") # and hopefully display
     Himage = Image.open(os.path.join(picdir, '7in5_V2.bmp'))
     epd.display(epd.getbuffer(Himage))
     time.sleep(5)
-
+    '''
 
     for i in range (10):
         logging.info("Drawing airplane and info")
         epd.init_fast()
         Himage = Image.new('1', (epd.width, epd.height), 255)  # 255: clear the frame
-        bmp = Image.open(os.path.join(picdir, 'airplane.bmp'))
+        bmp = Image.open(os.path.join(picdir, 'a320.bmp'))
         Himage.paste(bmp, (15, 0))
         draw = ImageDraw.Draw(Himage)
 
