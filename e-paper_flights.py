@@ -8,9 +8,10 @@ from FlightRadar24 import FlightRadar24API
 from waveshare_epd import epd7in5_V2
 import logging
 import time
+from flight_data import AIRPORT_MAP, AIRLINE_MAP, AIRCRAFT_MAP
 from PIL import Image,ImageDraw,ImageFont
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 picdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'pic')
@@ -20,34 +21,38 @@ font_very_small = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 25)
 font_date = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 50)
 font_airports = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 80)
 
-# Mapping of aircraft name prefixes → image file
-aircraft_map = {
-    "Airbus": "a320.bmp",
-    "Boeing 737": "boeing737.bmp",
-    "Boeing 747": "boeing747.bmp",
-    "De Havilland": "bombardier_dash8.png",
-}
 
+def get_curr_flight_info(fr_api, bounds):
+    try: 
+        # fr_api = FlightRadar24API()
+        flights = fr_api.get_flights(bounds=bounds)
+        if not flights: return None
 
+        for flight in flights:
+            if not flight.number: continue
+            if flight.on_ground: continue
 
-def get_curr_flight_info(bounds):
-    fr_api = FlightRadar24API() # check if this has to be done twice (timeout?)
-    flights = fr_api.get_flights(bounds=bounds, details=True)
-    for flight in flights:
-        if not flight.number: continue
-        if flight.on_ground: continue
-        return {
-            "number": flight.number,
-            "origin": flight.origin_airport_name,
-            "origin_iata": flight.origin_airport_iata,
-            "destination": flight.destination_airport_name,
-            "destination_iata": flight.destination_airport_iata,
-            "airline": flight.airline_short_name,
-            "aircraft": flight.aircraft_model,
-            "speed": flight.ground_speed
-        }
-        # additional possible information:
-        # heading, altitude, vertical speed
+            icao_prefix = flight.callsign[:3] if flight.callsign else ""
+            airline_name = AIRLINE_MAP.get(icao_prefix, icao_prefix)
+            origin_iata = flight.origin_airport_iata
+            dest_iata = flight.destination_airport_iata
+            
+            return {
+                "number": flight.number,
+                "origin": AIRPORT_MAP.get(origin_iata, origin_iata),
+                "origin_iata": origin_iata,
+                "destination": AIRPORT_MAP.get(dest_iata, dest_iata),
+                "destination_iata": dest_iata,
+                "airline": airline_name,
+                "aircraft": flight.aircraft_code,
+                "speed": flight.ground_speed
+            }
+    except Exception as e:
+        logging.error(f"Error fetching flight data: {e}")
+        time.sleep(60)
+        logging.info("Continue")
+        return None
+    
     return None
 
 def display_flight_info(epd, flight_info, time):
@@ -57,7 +62,7 @@ def display_flight_info(epd, flight_info, time):
     Himage = Image.new('1', (epd.width, epd.height), 255)  # 255: clear the frame
     # Find first matching prefix, otherwise default to a320.bmp
     bmp_file = next(
-        (fname for prefix, fname in aircraft_map.items() if flight_info['aircraft'].startswith(prefix)),
+        (fname for prefix, fname in AIRCRAFT_MAP.items() if flight_info['aircraft'].startswith(prefix)),
         "a320.bmp")
     bmp = Image.open(os.path.join(picdir, bmp_file))
     y_image = (256 - bmp.height) // 2
@@ -154,18 +159,19 @@ def print_flight_info(flight_info):
     print(f"  Speed:   {flight_info['speed']}")
     print()
 
-def get_weather():
+def get_weather(session):
     # This website could do a lot more than just temperature (i think)
     try:
-        response = requests.get("https://wttr.in/Luxembourg?format=%t", timeout=5)
+        response = session.get("https://wttr.in/Luxembourg?format=%t", timeout=5)
         response.raise_for_status()
         return response.text.strip()
     except requests.RequestException:
+        logging.error("Weather could not be found")
         return ""
 
 
 def main():
-    fr_api = FlightRadar24API()
+    fr_api = FlightRadar24API(timeout=5)
     # Location of Luxembourg 34, Rue Cents
     lux_latitude = 49.6166
     lux_longitude = 6.16
@@ -179,6 +185,8 @@ def main():
         radius=radius   
     )
 
+    session = requests.session()
+
     try:
         logging.info("start")
         epd = epd7in5_V2.EPD()
@@ -189,23 +197,36 @@ def main():
 
         last_flight_number = None
         curr_temp = ""
-        last_time = ""
+        last_time = time.time()
+        last_weather_time = 0
         flight = 1
 
         # add error handling!!
         while True:
-            flight_info = get_curr_flight_info(bounds)
-            current_time = time.strftime("%H:%M")
+            flight_info = get_curr_flight_info(fr_api, bounds)            
+            now = time.time()
 
             # No flight passing, therefore display time and temperature
             if not flight_info:
+
+                # update weather every 15mins and check night
+                if now - last_weather_time > 900:
+                    temp = get_weather(session)
+                    if temp: curr_temp = temp
+                    last_weather_time = now
+                    t = time.localtime()
+                    if t.tm_hour > 22 or t.tm_hour < 6:
+                        logging.info("Night mode. Sleeping...")
+                        epd.Clear()
+                        epd.sleep()
+                        while t.tm_hour > 22 or t.tm_hour < 6:
+                            time.sleep(3600)
+                            # get new api here?
+                
                 # only update once per minute
+                current_time = time.strftime("%H:%M")
                 if current_time == last_time and not flight: continue
                 last_time = current_time
-
-                # get new temperature
-                temp_info = get_weather()
-                if temp_info: curr_temp = temp_info
                 display_time(epd, current_time, time.strftime("%d. %B %Y"), curr_temp)
                 flight = 0
 
@@ -214,7 +235,8 @@ def main():
                 display_flight_info(epd, flight_info, current_time)
                 last_flight_number = flight_info['number']
                 flight = 1
-            time.sleep(5)
+
+            time.sleep(20)
 
 
     except IOError as e:
@@ -222,6 +244,8 @@ def main():
 
     except KeyboardInterrupt:
         logging.info("ctrl + c:")
+        epd.init()
+        epd.Clear()
         epd7in5_V2.epdconfig.module_exit(cleanup=True)
         exit()
 
