@@ -36,6 +36,8 @@ Reboot the Raspi to start the program again:
 
 
 
+## Errors
+
 
 
 
@@ -43,7 +45,11 @@ Reboot the Raspi to start the program again:
 ## To-Do
 
 - [x] Fix aircraft pictures
-- [ ] Figure out how to run it for longer? and how to turn off during night? and if i should do that with crontab or in file?
+- [x] Figure out how to turn off during night? Possibly with crontab
 - [ ] Add temperature warning?
 - [ ] Add support for private planes?
 - [x] Find clean way to stop program
+- [x] Add more airports (important for Cargolux)
+- [ ] Make font bigger
+- [ ] Fix HTTPSConnectionPool Error
+- [ ] Show correct airplane name

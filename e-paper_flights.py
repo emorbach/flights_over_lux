@@ -8,7 +8,7 @@ from FlightRadar24 import FlightRadar24API
 from waveshare_epd import epd7in5_V2
 import logging
 import time
-from flight_data import AIRPORT_MAP, AIRLINE_MAP, AIRCRAFT_MAP
+from flight_maps import AIRPORT_MAP, AIRLINE_MAP, AIRCRAFT_MAP
 from PIL import Image,ImageDraw,ImageFont
 
 logging.basicConfig(level=logging.INFO)
@@ -29,7 +29,7 @@ def get_curr_flight_info(fr_api, bounds):
         if not flights: return None
 
         for flight in flights:
-            if not flight.number: continue
+            # if not flight.number: continue
             if flight.on_ground: continue
 
             icao_prefix = flight.callsign[:3] if flight.callsign else ""
@@ -38,7 +38,7 @@ def get_curr_flight_info(fr_api, bounds):
             dest_iata = flight.destination_airport_iata
             
             return {
-                "number": flight.number,
+                "number": flight.number if flight.number else "",
                 "origin": AIRPORT_MAP.get(origin_iata, origin_iata),
                 "origin_iata": origin_iata,
                 "destination": AIRPORT_MAP.get(dest_iata, dest_iata),
@@ -217,6 +217,7 @@ def main():
                     t = time.localtime()
                     if t.tm_hour > 22 or t.tm_hour < 6:
                         logging.info("Night mode. Sleeping...")
+                        epd.init()
                         epd.Clear()
                         epd.sleep()
                         while t.tm_hour > 22 or t.tm_hour < 6:
