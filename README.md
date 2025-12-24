@@ -37,19 +37,17 @@ Reboot the Raspi to start the program again:
 
 
 ## Errors
-
-
-
+ERROR:root:Error fetching flight data: HTTPSConnectionPool(host='data-cloud.flightradar24.com', port=443): Max retries exceeded with url: /zones/fcgi/feed.js?faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=1&estimated=1&maxage=14400&gliders=1&stats=1&limit=5000&bounds=49.634583111433045%2C49.598610250237165%2C6.1322490860080885%2C6.187771405847902 (Caused by NewConnectionError('<urllib3.connection.VerifiedHTTPSConnection object at 0xaff2f1b0>: Failed to establish a new connection: [Errno -3] Temporary failure in name resolution'))
 
 
 ## To-Do
 
 - [x] Fix aircraft pictures
 - [x] Figure out how to turn off during night? Possibly with crontab
-- [ ] Add temperature warning?
-- [ ] Add support for private planes?
+- [x] Add support for private planes?
 - [x] Find clean way to stop program
 - [x] Add more airports (important for Cargolux)
-- [ ] Make font bigger
+- [x] Make font bigger
+- [ ] Add temperature warning?
 - [ ] Fix HTTPSConnectionPool Error
 - [ ] Show correct airplane name

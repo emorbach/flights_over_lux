@@ -100,5 +100,7 @@ AIRPORT_MAP = {
     "CGO": "Zhengzhou Xinzheng International Airport", 
     "HKG": "Hong Kong International Airport", 
     "IAH": "George Bush Intercontinental Airport", 
-    "NRT": "Narita International Airport"
+    "NRT": "Narita International Airport",
+    "MRS": "Marseille Provence Airport",
+    "VCE": "Venice Marco Polo Airport"
 }
