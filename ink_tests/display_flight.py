@@ -15,6 +15,8 @@ import traceback
 
 logging.basicConfig(level=logging.DEBUG)
 
+# Display the flight number with the flight big and the destination and origin airports
+
 try:
     logging.info("epd7in5_V2 Demo")
     epd = epd7in5_V2.EPD()

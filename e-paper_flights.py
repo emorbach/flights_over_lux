@@ -16,10 +16,9 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 picdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'pic')
 font_time_big = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 250)
-font_small = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 35)
-font_very_small = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 25)
 font_date = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 50)
-font_airports = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 80)
+font_airports = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 175)
+font_small = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 45)
 
 
 def get_curr_flight_info(fr_api, bounds):
@@ -55,7 +54,7 @@ def get_curr_flight_info(fr_api, bounds):
     
     return None
 
-def display_flight_info(epd, flight_info, time):
+def display_flight_info(epd, flight_info):
     logging.info("New flight detected")
     epd.init_fast()
 
@@ -69,51 +68,36 @@ def display_flight_info(epd, flight_info, time):
     Himage.paste(bmp, (15, y_image))
     draw = ImageDraw.Draw(Himage)
 
-    # --- Current time (top-right corner) ---
-    w_time, _ = draw.textsize(time, font=font_small)
-    x_time = epd.width - w_time -10
-    y_time = 10
-    draw.text((x_time, y_time), time, font=font_small, fill=0)
-
     # --- Origin, Destination, Airline, Aircraft ---
-    origin, destination = "Origin: ", "Dest:"
-    flight_origin, flight_destination = flight_info['origin_iata'], flight_info['destination_iata']
+    origin = "Origin:"
+    airport = flight_info['origin_iata']
+    if airport == "LUX":
+        origin = "Destination:"
+        airport = flight_info['destination_iata']
     airline, aircraft = flight_info['airline'], flight_info['aircraft']
 
-    x_origin, y_origin = 300, 80
-    line_gap = 20  # spacing between lines
+    x_origin, y_origin = 350, 10
+    line_gap = 10  # spacing between lines
 
     # Draw origin and destination labels
-    draw.text((x_origin, y_origin), origin, font=font_airports, fill=0)
-    draw.text((x_origin, y_origin + (draw.textsize(destination, font=font_airports)[1] + line_gap)), destination, font=font_airports, fill=0)
+    draw.text((x_origin, y_origin), origin, font=font_date, fill=0)
+    draw.text((x_origin, y_origin + (draw.textsize(airport, font=font_date)[1] + line_gap)), airport, font=font_airport, fill=0)
 
-    # Draw airport codes aligned with labels
-    w_origin, h_origin = draw.textsize(origin, font=font_airports)
-    draw.text((x_origin + w_origin + 10, y_origin), flight_origin, font=font_airports, fill=0)
-    draw.text((x_origin + w_origin + 10, y_origin + h_origin + line_gap), flight_destination, font=font_airports, fill=0)
+    # Aircraft
+    draw.text((20, 10), aircraft, font=font_small, fill=0)
 
-    # Airline (right-aligned with airport codes) and aircraft (left side)
-    w_airline, _ = draw.textsize(airline, font=font_small)
-    w_airport, _ = draw.textsize(flight_destination, font=font_airports)
+    # Airline
+    y_airline = y_origin + 200 + 2*line_gap
+    draw.text((20, y_airline), airline, font=font_date, fill=0)
 
-    x_airline = x_origin + w_origin + 10 + w_airport - w_airline
-    y_airline = y_origin + h_origin * 2 + line_gap
-    draw.text((x_airline, y_airline), airline, font=font_small, fill=0)
-    draw.text((20, y_airline), aircraft, font=font_small, fill=0)
-
-    # --- From / To ---
-    flight_no = f"Flight Number: {flight_info['number']}"
-    from_text = f"{flight_info['origin_iata']}: {flight_info['origin']}"
-    to_text   = f"{flight_info['destination_iata']}: {flight_info['destination']}"
-
+    # Flight number
     y_flight_no = y_airline + 70
-    draw.text((20, y_flight_no), flight_no, font=font_very_small, fill=0)
-
-    y_from = y_flight_no + 40
-    draw.text((20, y_from), from_text, font=font_very_small, fill=0)
-
-    y_to = y_from + 40
-    draw.text((20, y_to), to_text, font=font_very_small, fill=0)
+    draw.text((20, y_flight_no), flight_info['number'], font=font_date, fill=0)   
+    
+    # Full airport name 
+    from_text = AIRPORT_MAP.get(airport, airport)
+    y_from = y_flight_no + 80
+    draw.text((20, y_from), from_text, font=font_small, fill=0)
 
     # Send to e-paper
     epd.display(epd.getbuffer(Himage))
@@ -195,7 +179,8 @@ def main():
         epd.init()
         epd.Clear()
 
-        last_flight_number = None
+        origin = None
+        destination = None
         curr_temp = ""
         last_time = time.time()
         last_weather_time = 0
@@ -231,10 +216,11 @@ def main():
                 display_time(epd, current_time, time.strftime("%d. %B %Y"), curr_temp)
                 flight = 0
 
-            elif flight_info['number'] != last_flight_number:
+            elif flight_info['origin_iata'] != origin or flight_info['destination_iata'] != destination:
                 if (flight_info['speed'] > 300): continue
-                display_flight_info(epd, flight_info, current_time)
-                last_flight_number = flight_info['number']
+                display_flight_info(epd, flight_info)
+                origin = flight_info['origin_iata']
+                destination = flight_info['destination_iata']
                 flight = 1
 
             time.sleep(20)

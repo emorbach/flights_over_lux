@@ -15,6 +15,10 @@ import traceback
 
 logging.basicConfig(level=logging.DEBUG)
 
+# Display the flight with origin and destination (short)
+# And airline and stuff
+
+
 try:
     logging.info("epd7in5_V2 Demo")
     epd = epd7in5_V2.EPD()
